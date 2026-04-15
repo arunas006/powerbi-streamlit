@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import Optional
 
-from git import Optional
+from typing import Optional
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings,SettingsConfigDict
 
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
 
     # API KEY
-    OPENAI_API_KEY: SecretStr
+    OPENAI_API_KEY: Optional[SecretStr] = None
     openai_llm_model: str = "gpt-4o"
 
     # Embedding settings
