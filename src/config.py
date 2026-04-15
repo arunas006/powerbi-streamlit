@@ -13,9 +13,9 @@ class Settings(BaseSettings):
                                       case_sensitive=False)
 
     # Database settings
-    TENANT_ID: SecretStr
-    CLIENT_ID: SecretStr
-    CLIENT_SECRET: SecretStr
+    TENANT_ID: SecretStr =None
+    CLIENT_ID: SecretStr = None
+    CLIENT_SECRET: SecretStr = None
     DEV_WORKSPACE: str = "Dev"
     PROD_WORKSPACE: str = "Prod"
     POWER_BI_BASE_URL : str = "https://api.powerbi.com/v1.0/myorg"
