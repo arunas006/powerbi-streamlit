@@ -12,9 +12,36 @@ API_URL = f"{settings.AGENT_URL}/chat"
 st.set_page_config(page_title="Power BI Agent", page_icon="🤖", layout="wide")
 
 import ast
-
-import ast
 import json
+
+def deep_parse(obj):
+    """
+    Recursively parse stringified dicts inside dict
+    """
+    if isinstance(obj, str):
+        obj = obj.strip()
+
+        # Try JSON
+        try:
+            parsed = json.loads(obj)
+            return deep_parse(parsed)
+        except:
+            pass
+
+        # Try Python dict string
+        try:
+            parsed = ast.literal_eval(obj)
+            return deep_parse(parsed)
+        except:
+            return obj  # return as-is if not parsable
+
+    elif isinstance(obj, dict):
+        return {k: deep_parse(v) for k, v in obj.items()}
+
+    elif isinstance(obj, list):
+        return [deep_parse(i) for i in obj]
+
+    return obj
 
 def extract_clean_response(data):
     """
@@ -28,47 +55,62 @@ def extract_clean_response(data):
         else:
             raw = data
 
-        # Step 2: Keep parsing until it's clean
-        for _ in range(3):  # prevent infinite loop
-            if isinstance(raw, str):
-                raw = raw.strip()
+        raw = deep_parse(raw)
 
-                # Try JSON first
-                try:
-                    raw = json.loads(raw)
-                    continue
-                except:
-                    pass
-
-                # Try Python dict string
-                try:
-                    raw = ast.literal_eval(raw)
-                    continue
-                except:
-                    pass
-
-            break  # stop if not string
-
+        
         # Step 3: Final formatting
         if isinstance(raw, dict):
 
-            # ✅ Normal message
-            if "response" in raw:
-                return raw["response"]
+            if ("data" in raw and isinstance(raw["data"], dict) and "status" in raw["data"]
+                and isinstance(raw["data"]["status"], dict) and "counts" in raw["data"]["status"]):
 
-            # ✅ Comparison format
-            if "status" in raw and "data" in raw:
                 counts = raw["data"]["status"]["counts"]
+                status_data = raw["data"]["status"]
+                missing_in_prod = status_data.get("missing_in_prod", [])
+                missing_in_dev = status_data.get("missing_in_dev", [])
 
                 return f"""
-### 📊 Dashboard Comparison
+        ### 📊 Dashboard Comparison
 
-- Dev Total: **{counts.get('dev_total')}**
-- Prod Total: **{counts.get('prod_total')}**
-- Missing in Prod: **{counts.get('missing_in_prod')}**
-- Missing in Dev: **{counts.get('missing_in_dev')}**
-"""
+        - Dev Total: **{counts.get('dev_total')}**
+        - Prod Total: **{counts.get('prod_total')}**
+        - Missing in Prod: **{counts.get('missing_in_prod')}**
+        - Missing in Dev: **{counts.get('missing_in_dev')}**
+        - Missing in Prod:
+        {", ".join(missing_in_prod) if missing_in_prod else "None"}
+        - Missing in Dev:
+        {", ".join(missing_in_dev) if missing_in_dev else "None"}
+        """
+            # ✅ Case 2: Recommendation output (your new format)
+            elif ("data" in raw and isinstance(raw["data"], dict) and "dashboards" in raw["data"]):
+                
+                dashboards = raw["data"]["dashboards"]
 
+                formatted = "### 🎯 Recommended Dashboards\n\n"
+
+                for i, d in enumerate(dashboards, 1):
+                    name = d.get("Selected_Dashboard", "Unknown")
+                    reason = d.get("Reason", "")
+
+                    formatted += f"""
+                            **{i}. {name}**
+                            - {reason}
+
+                            """
+
+                return formatted
+            
+            elif ("data" in raw and isinstance(raw["data"], dict) and "message" in raw["data"]):
+                
+                d = raw["data"]
+
+                return f"""
+                    ### ✅ Operation Status: {d.get("status", "").upper()}
+
+                    **Dashboard:** {d.get("Dashboard_name", "N/A")}  
+                    **Message:** {d.get("message", "")}  
+                    **Resource ID:** `{d.get("resource_id", "")}`
+                    """
             return json.dumps(raw, indent=2)
 
         return str(raw)
