@@ -1,6 +1,8 @@
 
 from __future__ import annotations
+from typing import Optional
 
+from git import Optional
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings,SettingsConfigDict
 
@@ -13,9 +15,9 @@ class Settings(BaseSettings):
                                       case_sensitive=False)
 
     # Database settings
-    TENANT_ID: SecretStr =None
-    CLIENT_ID: SecretStr = None
-    CLIENT_SECRET: SecretStr = None
+    TENANT_ID: Optional[SecretStr] = None
+    CLIENT_ID: Optional[SecretStr] = None
+    CLIENT_SECRET: Optional[SecretStr] = None
     DEV_WORKSPACE: str = "Dev"
     PROD_WORKSPACE: str = "Prod"
     POWER_BI_BASE_URL : str = "https://api.powerbi.com/v1.0/myorg"
